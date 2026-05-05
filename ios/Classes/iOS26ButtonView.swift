@@ -46,6 +46,8 @@ class iOS26ButtonView: NSObject, FlutterPlatformView {
     private var iconName: String?
     private var iconSize: CGFloat?
     private var iconColor: UIColor?
+    private var svgAssetName: String?
+    private var svgString: String?
     private var useSmoothRectangleBorder: Bool = true
 
     init(
@@ -81,6 +83,10 @@ class iOS26ButtonView: NSObject, FlutterPlatformView {
             if let argb = config["iconColor"] as? Int {
                 iconColor = UIColor(argb: argb)
             }
+            
+            // SVG configuration
+            svgAssetName = config["svgAssetName"] as? String
+            svgString = config["svgString"] as? String
 
             // Use smooth rectangle border setting
             useSmoothRectangleBorder = config["useSmoothRectangleBorder"] as? Bool ?? true
@@ -208,6 +214,23 @@ class iOS26ButtonView: NSObject, FlutterPlatformView {
                     }
 
                     config.image = finalImage
+                    config.title = nil
+                    config.attributedTitle = nil
+                }
+            } else if let svgName = svgAssetName {
+                // SVG Asset mode
+                let key = FlutterDartProject.lookupKey(forAsset: svgName)
+                let size = iconSize ?? 24.0
+                if let image = SVGRenderer.render(named: key, size: CGSize(width: size, height: size), tintColor: iconColor) {
+                    config.image = image
+                    config.title = nil
+                    config.attributedTitle = nil
+                }
+            } else if let svgContent = svgString {
+                // SVG String mode
+                let size = iconSize ?? 24.0
+                if let image = SVGRenderer.render(svgString: svgContent, size: CGSize(width: size, height: size), tintColor: iconColor) {
+                    config.image = image
                     config.title = nil
                     config.attributedTitle = nil
                 }
@@ -373,6 +396,11 @@ class iOS26ButtonView: NSObject, FlutterPlatformView {
                 if let argb = args["iconColor"] as? Int {
                     iconColor = UIColor(argb: argb)
                 }
+                
+                // SVG support in setIcon
+                svgAssetName = args["svgAssetName"] as? String
+                svgString = args["svgString"] as? String
+                
                 applyLiquidGlassStyle()
             }
             result(nil)

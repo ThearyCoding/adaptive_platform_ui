@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:adaptive_platform_ui/src/utils/svg_renderer.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -60,6 +61,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
   List<String>? _lastSelectedFileIcons;
   List<String>? _lastNetworkIcons;
   List<String>? _lastSelectedNetworkIcons;
+  List<String>? _lastSvgIcons;
+  List<String>? _lastSelectedSvgIcons;
+  List<String>? _lastSvgStrings;
+  List<String>? _lastSelectedSvgStrings;
   List<int?>? _lastBadgeCounts;
   TabBarMinimizeBehavior? _lastMinimizeBehavior;
   bool? _lastHidden;
@@ -142,6 +147,16 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     return '';
   }
 
+  String _extractSvgAssetPath(Object? icon) {
+    if (icon is NativeSvg) return icon.assetName ?? '';
+    return '';
+  }
+
+  String _extractSvgString(Object? icon) {
+    if (icon is NativeSvg) return icon.string ?? '';
+    return '';
+  }
+
   List<String> _mapSymbols() =>
       widget.destinations.map((e) => _extractSymbol(e.icon)).toList();
 
@@ -166,6 +181,20 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
       .map((e) => _extractNetworkUrl(e.selectedIcon ?? e.icon))
       .toList();
 
+  List<String> _mapSvgIcons() =>
+      widget.destinations.map((e) => _extractSvgAssetPath(e.icon)).toList();
+
+  List<String> _mapSelectedSvgIcons() => widget.destinations
+      .map((e) => _extractSvgAssetPath(e.selectedIcon ?? e.icon))
+      .toList();
+
+  List<String> _mapSvgStrings() =>
+      widget.destinations.map((e) => _extractSvgString(e.icon)).toList();
+
+  List<String> _mapSelectedSvgStrings() => widget.destinations
+      .map((e) => _extractSvgString(e.selectedIcon ?? e.icon))
+      .toList();
+
   @override
   Widget build(BuildContext context) {
     if (!kIsWeb && Platform.isIOS) {
@@ -177,6 +206,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
       final selectedFileIcons = _mapSelectedFileIcons();
       final networkIcons = _mapNetworkIcons();
       final selectedNetworkIcons = _mapSelectedNetworkIcons();
+      final svgIcons = _mapSvgIcons();
+      final selectedSvgIcons = _mapSelectedSvgIcons();
+      final svgStrings = _mapSvgStrings();
+      final selectedSvgStrings = _mapSelectedSvgStrings();
 
       final searchFlags = widget.destinations.map((e) => e.isSearch).toList();
       final badgeCounts = widget.destinations.map((e) => e.badgeCount).toList();
@@ -196,6 +229,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
         'spacerFlags': spacerFlags,
+        'svgIcons': svgIcons,
+        'selectedSvgIcons': selectedSvgIcons,
+        'svgStrings': svgStrings,
+        'selectedSvgStrings': selectedSvgStrings,
         'selectedIndex': widget.selectedIndex,
         'isDark': _isDark,
         'isRtl': _isRtl,
@@ -345,6 +382,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     final selectedNetworkIcons = _mapSelectedNetworkIcons();
     final searchFlags = widget.destinations.map((e) => e.isSearch).toList();
     final badgeCounts = widget.destinations.map((e) => e.badgeCount).toList();
+    final svgIcons = _mapSvgIcons();
+    final selectedSvgIcons = _mapSelectedSvgIcons();
+    final svgStrings = _mapSvgStrings();
+    final selectedSvgStrings = _mapSelectedSvgStrings();
 
     if (_lastLabels?.join('|') != labels.join('|') ||
         _lastSymbols?.join('|') != symbols.join('|') ||
@@ -353,8 +394,11 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         _lastFileIcons?.join('|') != fileIcons.join('|') ||
         _lastSelectedFileIcons?.join('|') != selectedFileIcons.join('|') ||
         _lastNetworkIcons?.join('|') != networkIcons.join('|') ||
-        _lastSelectedNetworkIcons?.join('|') !=
-            selectedNetworkIcons.join('|')) {
+        _lastSelectedNetworkIcons?.join('|') != selectedNetworkIcons.join('|') ||
+        _lastSvgIcons?.join('|') != svgIcons.join('|') ||
+        _lastSelectedSvgIcons?.join('|') != selectedSvgIcons.join('|') ||
+        _lastSvgStrings?.join('|') != svgStrings.join('|') ||
+        _lastSelectedSvgStrings?.join('|') != selectedSvgStrings.join('|')) {
       await ch.invokeMethod('setItems', {
         'labels': labels,
         'sfSymbols': symbols,
@@ -364,6 +408,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         'selectedFileIcons': selectedFileIcons,
         'networkIcons': networkIcons,
         'selectedNetworkIcons': selectedNetworkIcons,
+        'svgIcons': svgIcons,
+        'selectedSvgIcons': selectedSvgIcons,
+        'svgStrings': svgStrings,
+        'selectedSvgStrings': selectedSvgStrings,
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
         'selectedIndex': widget.selectedIndex,
@@ -376,6 +424,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
       _lastSelectedFileIcons = selectedFileIcons;
       _lastNetworkIcons = networkIcons;
       _lastSelectedNetworkIcons = selectedNetworkIcons;
+      _lastSvgIcons = svgIcons;
+      _lastSelectedSvgIcons = selectedSvgIcons;
+      _lastSvgStrings = svgStrings;
+      _lastSelectedSvgStrings = selectedSvgStrings;
       _requestIntrinsicSize();
     }
 
@@ -431,6 +483,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     _lastSelectedFileIcons = _mapSelectedFileIcons();
     _lastNetworkIcons = _mapNetworkIcons();
     _lastSelectedNetworkIcons = _mapSelectedNetworkIcons();
+    _lastSvgIcons = _mapSvgIcons();
+    _lastSelectedSvgIcons = _mapSelectedSvgIcons();
+    _lastSvgStrings = _mapSvgStrings();
+    _lastSelectedSvgStrings = _mapSelectedSvgStrings();
     _lastBadgeCounts = widget.destinations.map((e) => e.badgeCount).toList();
   }
 
@@ -466,6 +522,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     final selectedFileIcons = _mapSelectedFileIcons();
     final networkIcons = _mapNetworkIcons();
     final selectedNetworkIcons = _mapSelectedNetworkIcons();
+    final svgIcons = _mapSvgIcons();
+    final selectedSvgIcons = _mapSelectedSvgIcons();
+    final svgStrings = _mapSvgStrings();
+    final selectedSvgStrings = _mapSelectedSvgStrings();
     final searchFlags = widget.destinations.map((e) => e.isSearch).toList();
     final badgeCounts = widget.destinations.map((e) => e.badgeCount).toList();
 
@@ -479,6 +539,10 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         'selectedFileIcons': selectedFileIcons,
         'networkIcons': networkIcons,
         'selectedNetworkIcons': selectedNetworkIcons,
+        'svgIcons': svgIcons,
+        'selectedSvgIcons': selectedSvgIcons,
+        'svgStrings': svgStrings,
+        'selectedSvgStrings': selectedSvgStrings,
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
         'selectedIndex': widget.selectedIndex,

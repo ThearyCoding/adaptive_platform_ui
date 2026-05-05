@@ -32,7 +32,7 @@ export 'src/platform/platform_info.dart';
 
 // Styles
 export 'src/style/sf_symbol.dart';
-
+export 'src/utils/svg_renderer.dart';
 // Widgets
 export 'src/widgets/adaptive_app.dart';
 export 'src/widgets/adaptive_app_bar.dart';

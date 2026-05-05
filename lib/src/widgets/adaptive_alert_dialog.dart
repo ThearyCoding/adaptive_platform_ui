@@ -60,15 +60,6 @@ class AdaptiveAlertDialog {
   }) {
     // iOS 26+ - Use native iOS 26 alert dialog
     if (PlatformInfo.isIOS26OrHigher()) {
-      // Convert icon to String if needed for iOS 26 (expects SF Symbol)
-      String? iconString;
-      if (icon != null) {
-        if (icon is String) {
-          iconString = icon;
-        }
-        // If IconData is provided on iOS 26+, ignore it (iOS 26 uses SF Symbols)
-      }
-
       return showCupertinoDialog<void>(
         context: context,
         barrierColor: CupertinoColors.transparent,
@@ -76,7 +67,7 @@ class AdaptiveAlertDialog {
           title: title,
           message: message,
           actions: actions,
-          icon: iconString,
+          icon: icon,
           iconSize: iconSize,
           iconColor: iconColor,
           oneTimeCode: oneTimeCode,
@@ -209,21 +200,13 @@ class AdaptiveAlertDialog {
   }) {
     // iOS 26+ - Use native iOS 26 alert dialog with input
     if (PlatformInfo.isIOS26OrHigher()) {
-      // Convert icon to String if needed for iOS 26 (expects SF Symbol)
-      String? iconString;
-      if (icon != null) {
-        if (icon is String) {
-          iconString = icon;
-        }
-      }
-
       return showCupertinoDialog<String?>(
         context: context,
         builder: (context) => IOS26AlertDialog(
           title: title,
           message: message,
           actions: actions,
-          icon: iconString,
+          icon: icon,
           iconSize: iconSize,
           iconColor: iconColor,
           oneTimeCode: null,

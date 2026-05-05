@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../platform/platform_info.dart';
+import '../utils/svg_renderer.dart';
 import 'ios26/ios26_segmented_control.dart';
 
 /// An adaptive segmented control that renders platform-specific styles
@@ -119,12 +120,22 @@ class AdaptiveSegmentedControl extends StatelessWidget {
       if (useIcons) {
         // Icon mode
         final dynamic icon = sfSymbols![i];
-        children[i] = Padding(
-          padding: const EdgeInsets.all(8),
-          child: icon is IconData
-              ? Icon(icon, size: iconSize ?? 20, color: iconColor)
-              : Text(icon.toString()),
-        );
+        if (icon is IconData) {
+          children[i] = Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(icon, size: iconSize ?? 20, color: iconColor),
+          );
+        } else if (icon is NativeSvg) {
+          children[i] = Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(Icons.image, size: iconSize ?? 20, color: iconColor),
+          );
+        } else {
+          children[i] = Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(icon.toString()),
+          );
+        }
       } else {
         // Text mode
         children[i] = Padding(
@@ -197,7 +208,9 @@ class AdaptiveSegmentedControl extends StatelessWidget {
             value: i,
             icon: icon is IconData
                 ? Icon(icon, size: iconSize ?? 20, color: iconColor)
-                : Icon(Icons.circle, size: iconSize ?? 20, color: iconColor),
+                : icon is NativeSvg
+                    ? Icon(Icons.image, size: iconSize ?? 20, color: iconColor)
+                    : Icon(Icons.circle, size: iconSize ?? 20, color: iconColor),
           ),
         );
       } else {

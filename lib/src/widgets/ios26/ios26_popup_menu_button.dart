@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import '../../utils/svg_renderer.dart';
 
 /// Base type for entries in a popup menu
 abstract class AdaptivePopupMenuEntry {
@@ -103,7 +104,7 @@ class IOS26PopupMenuButton<T> extends StatefulWidget {
   final String? buttonLabel;
 
   /// Icon for the button (non-null in icon mode)
-  final String? buttonIcon;
+  final dynamic buttonIcon;
 
   /// Custom child widget (non-null in widget mode)
   final Widget? child;
@@ -180,9 +181,15 @@ class _IOS26PopupMenuButtonState<T> extends State<IOS26PopupMenuButton<T>> {
     if (ch == null) return;
 
     try {
+      final svgAssetName = widget.buttonIcon is NativeSvg ? (widget.buttonIcon as NativeSvg).assetName : null;
+      final svgString = widget.buttonIcon is NativeSvg ? (widget.buttonIcon as NativeSvg).string : null;
+      final iconName = widget.buttonIcon is String ? widget.buttonIcon as String : null;
+
       await ch.invokeMethod('updateButtonContent', {
         if (widget.buttonLabel != null) 'buttonTitle': widget.buttonLabel,
-        if (widget.buttonIcon != null) 'buttonIconName': widget.buttonIcon,
+        if (iconName != null) 'buttonIconName': iconName,
+        if (svgAssetName != null) 'buttonSvgAssetName': svgAssetName,
+        if (svgString != null) 'buttonSvgString': svgString,
       });
     } catch (_) {}
   }
@@ -216,9 +223,10 @@ class _IOS26PopupMenuButtonState<T> extends State<IOS26PopupMenuButton<T>> {
     final ch = _channel;
     if (ch == null) return;
 
-    // Flatten entries into parallel arrays for the platform view
     final labels = <String>[];
     final symbols = <String>[];
+    final svgIcons = <String>[];
+    final svgStrings = <String>[];
     final isDivider = <bool>[];
     final enabled = <bool>[];
 
@@ -226,11 +234,15 @@ class _IOS26PopupMenuButtonState<T> extends State<IOS26PopupMenuButton<T>> {
       if (e is AdaptivePopupMenuDivider) {
         labels.add('');
         symbols.add('');
+        svgIcons.add('');
+        svgStrings.add('');
         isDivider.add(true);
         enabled.add(false);
       } else if (e is AdaptivePopupMenuItem<T>) {
         labels.add(e.label);
         symbols.add(e.icon is String ? e.icon as String : '');
+        svgIcons.add(e.icon is NativeSvg ? (e.icon as NativeSvg).assetName ?? '' : '');
+        svgStrings.add(e.icon is NativeSvg ? (e.icon as NativeSvg).string ?? '' : '');
         isDivider.add(false);
         enabled.add(e.enabled);
       }
@@ -240,6 +252,8 @@ class _IOS26PopupMenuButtonState<T> extends State<IOS26PopupMenuButton<T>> {
       await ch.invokeMethod('updateMenuItems', {
         'labels': labels,
         'sfSymbols': symbols,
+        'svgIcons': svgIcons,
+        'svgStrings': svgStrings,
         'isDivider': isDivider,
         'enabled': enabled,
       });
@@ -263,131 +277,151 @@ class _IOS26PopupMenuButtonState<T> extends State<IOS26PopupMenuButton<T>> {
   bool get isCustomWidget => widget.child != null;
 
   @override
-  Widget build(BuildContext context) {
-    if (!kIsWeb && Platform.isIOS) {
-      // Flatten entries into parallel arrays for the platform view
-      final labels = <String>[];
-      final symbols = <String>[];
-      final isDivider = <bool>[];
-      final enabled = <bool>[];
+Widget build(BuildContext context) {
+  if (!kIsWeb && Platform.isIOS) {
+    // Flatten entries into parallel arrays for the platform view
+    final labels = <String>[];
+    final symbols = <String>[];
+    final svgIcons = <String>[];
+    final svgStrings = <String>[];
+    final isDivider = <bool>[];
+    final enabled = <bool>[];
 
-      for (final e in widget.items) {
-        if (e is AdaptivePopupMenuDivider) {
-          labels.add('');
-          symbols.add('');
-          isDivider.add(true);
-          enabled.add(false);
-        } else if (e is AdaptivePopupMenuItem<T>) {
-          labels.add(e.label);
-          symbols.add(e.icon is String ? e.icon as String : '');
-          isDivider.add(false);
-          enabled.add(e.enabled);
-        }
+    for (final e in widget.items) {
+      if (e is AdaptivePopupMenuDivider) {
+        labels.add('');
+        symbols.add('');
+        svgIcons.add('');
+        svgStrings.add('');
+        isDivider.add(true);
+        enabled.add(false);
+      } else if (e is AdaptivePopupMenuItem<T>) {
+        labels.add(e.label);
+        symbols.add(e.icon is String ? e.icon as String : '');
+        svgIcons.add(e.icon is NativeSvg ? (e.icon as NativeSvg).assetName ?? '' : '');
+        svgStrings.add(e.icon is NativeSvg ? (e.icon as NativeSvg).string ?? '' : '');
+        isDivider.add(false);
+        enabled.add(e.enabled);
       }
+    }
 
-      final creationParams = <String, dynamic>{
-        if (widget.buttonLabel != null) 'buttonTitle': widget.buttonLabel,
-        if (widget.buttonIcon != null) 'buttonIconName': widget.buttonIcon,
-        if (widget.isIconButton) 'round': true,
-        if (isCustomWidget) 'customWidget': true, // Hide native button content
-        'buttonStyle': widget.buttonStyle.name,
-        'labels': labels,
-        'sfSymbols': symbols,
-        'isDivider': isDivider,
-        'enabled': enabled,
-        'isDark': _isDark,
-        if (_effectiveTint != null) 'tint': _colorToARGB(_effectiveTint!),
-      };
+    final svgAssetName = widget.buttonIcon is NativeSvg ? (widget.buttonIcon as NativeSvg).assetName : null;
+    final svgString = widget.buttonIcon is NativeSvg ? (widget.buttonIcon as NativeSvg).string : null;
+    final iconName = widget.buttonIcon is String ? widget.buttonIcon as String : null;
 
-      // Create a unique key based on button label/icon and items to force recreation on change
-      final itemsKey = widget.items
-          .map((item) {
-            if (item is AdaptivePopupMenuItem<T>) {
-              return '${item.label}_${item.icon}_${item.enabled}_${item.value}';
-            }
-            return 'divider';
-          })
-          .join('_');
+    final creationParams = <String, dynamic>{
+      if (widget.buttonLabel != null) 'buttonTitle': widget.buttonLabel,
+      if (iconName != null) 'buttonIconName': iconName,
+      if (svgAssetName != null) 'buttonSvgAssetName': svgAssetName,
+      if (svgString != null) 'buttonSvgString': svgString,
+      if (widget.isIconButton) 'round': true,
+      if (isCustomWidget) 'customWidget': true,
+      'buttonStyle': widget.buttonStyle.name,
+      'labels': labels,
+      'sfSymbols': symbols,
+      'svgIcons': svgIcons,
+      'svgStrings': svgStrings,
+      'isDivider': isDivider,
+      'enabled': enabled,
+      'isDark': _isDark,
+      if (_effectiveTint != null) 'tint': _colorToARGB(_effectiveTint!),
+    };
 
-      final viewKey = ValueKey(
-        '${widget.buttonLabel}_${widget.buttonIcon}_${widget.child?.runtimeType}_$itemsKey',
-      );
-
-      final platformView = UiKitView(
-        key: viewKey,
-        viewType: 'adaptive_platform_ui/ios26_popup_menu_button',
-        creationParams: creationParams,
-        creationParamsCodec: const StandardMessageCodec(),
-        onPlatformViewCreated: _onCreated,
-        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-          Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
-        },
-      );
-
-      // Custom widget mode: Stack with custom widget determining size
-      if (isCustomWidget) {
-        return Stack(
-          fit: StackFit.passthrough,
-          children: [
-            widget.child!, // Determines size and is visible
-            Positioned.fill(
-              child:
-                  platformView, // Native button overlay (transparent but catches touches)
-            ),
-          ],
-        );
-      }
-
-      // Standard mode: Use LayoutBuilder for sizing
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final hasBoundedWidth = constraints.hasBoundedWidth;
-          final preferIntrinsic = widget.shrinkWrap || !hasBoundedWidth;
-
-          double? width;
-          if (widget.isIconButton) {
-            width = widget.width ?? widget.height;
-          } else if (preferIntrinsic) {
-            width = _intrinsicWidth;
+    // Create a unique key based on button label/icon and items to force recreation on change
+    final itemsKey = widget.items
+        .map((item) {
+          if (item is AdaptivePopupMenuItem<T>) {
+            return '${item.label}_${item.icon}_${item.enabled}_${item.value}';
           }
+          return 'divider';
+        })
+        .join('_');
 
-          return SizedBox(
-            height: widget.height,
-            width:
-                widget.width ??
-                (preferIntrinsic
-                    ? width
-                    : (hasBoundedWidth ? constraints.maxWidth : null)),
-            child: platformView,
-          );
-        },
-      );
-    }
+    final viewKey = ValueKey(
+      '${widget.buttonLabel}_${widget.buttonIcon}_${widget.child?.runtimeType}_$itemsKey',
+    );
 
-    // Fallback to CupertinoButton with action sheet
+    final platformView = UiKitView(
+      key: viewKey,
+      viewType: 'adaptive_platform_ui/ios26_popup_menu_button',
+      creationParams: creationParams,
+      creationParamsCodec: const StandardMessageCodec(),
+      onPlatformViewCreated: _onCreated,
+      gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+        Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
+      },
+    );
+
+    // Custom widget mode: Stack with custom widget determining size
     if (isCustomWidget) {
-      return GestureDetector(
-        onTap: () => _showContextMenu(context, Offset.zero),
-        child: widget.child!,
+      return Stack(
+        fit: StackFit.passthrough,
+        children: [
+          widget.child!,
+          Positioned.fill(
+            child: platformView,
+          ),
+        ],
       );
     }
 
-    return SizedBox(
-      height: widget.height,
-      width: widget.isIconButton && widget.round
-          ? (widget.width ?? widget.height)
-          : null,
-      child: CupertinoButton(
-        padding: widget.isIconButton
-            ? const EdgeInsets.all(4)
-            : const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        onPressed: () => _showContextMenu(context, Offset.zero),
-        child: widget.isIconButton
-            ? const Icon(CupertinoIcons.ellipsis)
-            : Text(widget.buttonLabel ?? ''),
-      ),
+    // Standard mode: Use LayoutBuilder for sizing
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final hasBoundedWidth = constraints.hasBoundedWidth;
+        final preferIntrinsic = widget.shrinkWrap || !hasBoundedWidth;
+
+        // FIX: Don't try to use infinite width - use constrained width instead
+        double? width;
+        if (widget.isIconButton) {
+          width = widget.width ?? widget.height;
+        } else if (preferIntrinsic) {
+          // If we don't have the intrinsic width yet, use a placeholder or
+          // fall back to the max width constraint if bounded
+          if (_intrinsicWidth != null) {
+            width = _intrinsicWidth;
+          } else if (hasBoundedWidth) {
+            // Use a reasonable default until intrinsic width is available
+            width = constraints.maxWidth > 0 ? constraints.maxWidth : 100.0;
+          } else {
+            // If no bounded width and no intrinsic width yet, use a default
+            width = 100.0;
+          }
+        }
+
+        return SizedBox(
+          height: widget.height,
+          width: widget.width ?? (preferIntrinsic ? width : (hasBoundedWidth ? constraints.maxWidth : null)),
+          child: platformView,
+        );
+      },
     );
   }
+
+  // Fallback to CupertinoButton with action sheet
+  if (isCustomWidget) {
+    return GestureDetector(
+      onTap: () => _showContextMenu(context, Offset.zero),
+      child: widget.child!,
+    );
+  }
+
+  return SizedBox(
+    height: widget.height,
+    width: widget.isIconButton && widget.round
+        ? (widget.width ?? widget.height)
+        : null,
+    child: CupertinoButton(
+      padding: widget.isIconButton
+          ? const EdgeInsets.all(4)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      onPressed: () => _showContextMenu(context, Offset.zero),
+      child: widget.isIconButton
+          ? const Icon(CupertinoIcons.ellipsis)
+          : Text(widget.buttonLabel ?? ''),
+    ),
+  );
+}
 
   void _onCreated(int id) {
     final ch = MethodChannel(

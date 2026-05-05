@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import '../../utils/svg_renderer.dart';
 import '../adaptive_alert_dialog.dart';
 
 /// Action types for alert dialog buttons
@@ -82,8 +83,8 @@ class IOS26AlertDialog extends StatefulWidget {
   /// List of actions for the alert
   final List<AlertAction> actions;
 
-  /// Optional SF Symbol icon name to display in the alert
-  final String? icon;
+  /// Optional SF Symbol icon name or NativeSvg to display in the alert
+  final dynamic icon;
 
   /// Optional icon size
   final double? iconSize;
@@ -140,13 +141,19 @@ class _IOS26AlertDialogState extends State<IOS26AlertDialog> {
   @override
   Widget build(BuildContext context) {
     if (!kIsWeb && Platform.isIOS) {
+      final svgAssetName = widget.icon is NativeSvg ? (widget.icon as NativeSvg).assetName : null;
+      final svgString = widget.icon is NativeSvg ? (widget.icon as NativeSvg).string : null;
+      final iconName = widget.icon is String ? widget.icon as String : null;
+
       final creationParams = <String, dynamic>{
         'title': widget.title,
         if (widget.message != null) 'message': widget.message,
         'actionTitles': widget.actions.map((a) => a.title).toList(),
         'actionStyles': widget.actions.map((a) => a.style.name).toList(),
         'actionEnabled': widget.actions.map((a) => a.enabled).toList(),
-        if (widget.icon != null) 'iconName': widget.icon,
+        if (iconName != null) 'iconName': iconName,
+        if (svgAssetName != null) 'svgAssetName': svgAssetName,
+        if (svgString != null) 'svgString': svgString,
         if (widget.iconSize != null) 'iconSize': widget.iconSize,
         if (widget.iconColor != null)
           'iconColor': _colorToARGB(widget.iconColor!),

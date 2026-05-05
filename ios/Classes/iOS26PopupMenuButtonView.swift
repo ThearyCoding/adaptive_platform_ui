@@ -10,6 +10,8 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
     private var isRoundButton: Bool = false
     private var labels: [String] = []
     private var symbols: [String] = []
+    private var svgIcons: [String] = []
+    private var svgStrings: [String] = []
     private var dividers: [Bool] = []
     private var enabled: [Bool] = []
 
@@ -20,12 +22,16 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
 
         var title: String? = nil
         var iconName: String? = nil
+        var svgAssetName: String? = nil
+        var svgString: String? = nil
         var makeRound: Bool = false
         var isDark: Bool = false
         var tint: UIColor? = nil
         var buttonStyle: String = "plain"
         var labels: [String] = []
         var symbols: [String] = []
+        var svgIcons: [String] = []
+        var svgStrings: [String] = []
         var dividers: [NSNumber] = []
         var enabled: [NSNumber] = []
         var isCustomWidget: Bool = false
@@ -33,6 +39,8 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
         if let dict = args as? [String: Any] {
             if let t = dict["buttonTitle"] as? String { title = t }
             if let s = dict["buttonIconName"] as? String { iconName = s }
+            if let sa = dict["buttonSvgAssetName"] as? String { svgAssetName = sa }
+            if let ss = dict["buttonSvgString"] as? String { svgString = ss }
             if let r = dict["round"] as? NSNumber { makeRound = r.boolValue }
             if let v = dict["isDark"] as? NSNumber { isDark = v.boolValue }
             if let tintArgb = dict["tint"] as? NSNumber { tint = UIColor(argb: tintArgb.intValue) }
@@ -40,6 +48,8 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
             if let cw = dict["customWidget"] as? NSNumber { isCustomWidget = cw.boolValue }
             labels = (dict["labels"] as? [String]) ?? []
             symbols = (dict["sfSymbols"] as? [String]) ?? []
+            svgIcons = (dict["svgIcons"] as? [String]) ?? []
+            svgStrings = (dict["svgStrings"] as? [String]) ?? []
             dividers = (dict["isDivider"] as? [NSNumber]) ?? []
             enabled = (dict["enabled"] as? [NSNumber]) ?? []
         }
@@ -65,6 +75,8 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
         // Store menu items
         self.labels = labels
         self.symbols = symbols
+        self.svgIcons = svgIcons
+        self.svgStrings = svgStrings
         self.dividers = dividers.map { $0.boolValue }
         self.enabled = enabled.map { $0.boolValue }
 
@@ -74,7 +86,7 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
         // Set button content (hide if custom widget is used)
         if !isCustomWidget {
             applyButtonStyle(buttonStyle: buttonStyle, round: makeRound)
-            setButtonContent(title: title, icon: iconName)
+            setButtonContent(title: title, icon: iconName, svgAssetName: svgAssetName, svgString: svgString)
         } else {
             // Make button fully transparent but functional
             button.backgroundColor = .clear
@@ -123,6 +135,8 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
                 if let args = call.arguments as? [String: Any] {
                     self.labels = (args["labels"] as? [String]) ?? []
                     self.symbols = (args["sfSymbols"] as? [String]) ?? []
+                    self.svgIcons = (args["svgIcons"] as? [String]) ?? []
+                    self.svgStrings = (args["svgStrings"] as? [String]) ?? []
                     self.dividers = ((args["isDivider"] as? [NSNumber]) ?? []).map { $0.boolValue }
                     self.enabled = ((args["enabled"] as? [NSNumber]) ?? []).map { $0.boolValue }
                     self.rebuildMenu()
@@ -132,7 +146,9 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
                 if let args = call.arguments as? [String: Any] {
                     let title = args["buttonTitle"] as? String
                     let iconName = args["buttonIconName"] as? String
-                    self.setButtonContent(title: title, icon: iconName)
+                    let svgAssetName = args["buttonSvgAssetName"] as? String
+                    let svgString = args["buttonSvgString"] as? String
+                    self.setButtonContent(title: title, icon: iconName, svgAssetName: svgAssetName, svgString: svgString)
                     result(nil)
                 } else { result(FlutterError(code: "bad_args", message: "Missing button content", details: nil)) }
             default:
@@ -148,7 +164,7 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
         if #available(iOS 14.0, *) {
             var groups: [[UIMenuElement]] = []
             var current: [UIMenuElement] = []
-            let count = max(labels.count, max(symbols.count, dividers.count))
+            let count = max(labels.count, max(symbols.count, max(dividers.count, max(svgIcons.count, svgStrings.count))))
 
             let flushGroup: () -> Void = {
                 if !current.isEmpty { groups.append(current); current = [] }
@@ -163,8 +179,14 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
 
                 let title = i < labels.count ? labels[i] : ""
                 var image: UIImage? = nil
+                
                 if i < symbols.count, !symbols[i].isEmpty {
                     image = UIImage(systemName: symbols[i])
+                } else if i < svgIcons.count, !svgIcons[i].isEmpty {
+                    let key = FlutterDartProject.lookupKey(forAsset: svgIcons[i])
+                    image = SVGRenderer.render(named: key, size: CGSize(width: 20, height: 20))
+                } else if i < svgStrings.count, !svgStrings[i].isEmpty {
+                    image = SVGRenderer.render(svgString: svgStrings[i], size: CGSize(width: 20, height: 20))
                 }
 
                 let isEnabled = i < enabled.count ? enabled[i] : true
@@ -183,45 +205,6 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
             }
             button.menu = UIMenu(title: "", children: children)
         }
-    }
-
-    @objc private func onButtonPressedLegacy(_ sender: UIButton) {
-        // iOS 13 fallback: use action sheet
-        let ac = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        var selectableIndex = 0
-        let count = max(labels.count, max(symbols.count, dividers.count))
-
-        for i in 0..<count {
-            if i < dividers.count, dividers[i] {
-                let fake = UIAlertAction(title: "—", style: .default, handler: nil)
-                fake.isEnabled = false
-                ac.addAction(fake)
-                continue
-            }
-
-            let title = i < labels.count ? labels[i] : ""
-            let currentSelectableIndex = selectableIndex
-            selectableIndex += 1
-
-            let action = UIAlertAction(title: title, style: .default) { [weak self] _ in
-                self?.channel.invokeMethod("itemSelected", arguments: ["index": currentSelectableIndex])
-            }
-
-            if i < enabled.count { action.isEnabled = enabled[i] }
-
-            // Optional: set image where supported
-            if i < symbols.count, !symbols[i].isEmpty, let img = UIImage(systemName: symbols[i]) {
-                if #available(iOS 13.0, *) { action.setValue(img, forKey: "image") }
-            }
-            ac.addAction(action)
-        }
-        ac.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
-
-        if let pop = ac.popoverPresentationController {
-            pop.sourceView = sender
-            pop.sourceRect = sender.bounds
-        }
-        parentViewController(for: container)?.present(ac, animated: true, completion: nil)
     }
 
     private func parentViewController(for view: UIView) -> UIViewController? {
@@ -285,20 +268,75 @@ class iOS26PopupMenuButtonView: NSObject, FlutterPlatformView {
         }
     }
 
-    private func setButtonContent(title: String?, icon: String?) {
+    private func setButtonContent(title: String?, icon: String?, svgAssetName: String? = nil, svgString: String? = nil) {
+        var buttonIcon: UIImage? = nil
+        if let iconName = icon {
+            buttonIcon = UIImage(systemName: iconName)
+        } else if let assetName = svgAssetName {
+            let key = FlutterDartProject.lookupKey(forAsset: assetName)
+            buttonIcon = SVGRenderer.render(named: key, size: CGSize(width: 24, height: 24))
+        } else if let svgData = svgString {
+            buttonIcon = SVGRenderer.render(svgString: svgData, size: CGSize(width: 24, height: 24))
+        }
+
         if #available(iOS 15.0, *) {
             var cfg = button.configuration ?? .plain()
             cfg.title = title
-            if let iconName = icon, let image = UIImage(systemName: iconName) {
-                cfg.image = image
-            }
+            cfg.image = buttonIcon
             button.configuration = cfg
         } else {
             button.setTitle(title, for: .normal)
-            if let iconName = icon, let image = UIImage(systemName: iconName) {
-                button.setImage(image, for: .normal)
-            }
+            button.setImage(buttonIcon, for: .normal)
         }
+    }
+
+    @objc private func onButtonPressedLegacy(_ sender: UIButton) {
+        // iOS 13 fallback: use action sheet
+        let ac = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        var selectableIndex = 0
+        let count = max(labels.count, max(symbols.count, max(dividers.count, max(svgIcons.count, svgStrings.count))))
+
+        for i in 0..<count {
+            if i < dividers.count, dividers[i] {
+                let fake = UIAlertAction(title: "—", style: .default, handler: nil)
+                fake.isEnabled = false
+                ac.addAction(fake)
+                continue
+            }
+
+            let title = i < labels.count ? labels[i] : ""
+            let currentSelectableIndex = selectableIndex
+            selectableIndex += 1
+
+            let action = UIAlertAction(title: title, style: .default) { [weak self] _ in
+                self?.channel.invokeMethod("itemSelected", arguments: ["index": currentSelectableIndex])
+            }
+
+            if i < enabled.count { action.isEnabled = enabled[i] }
+
+            // Set icon for action
+            var img: UIImage? = nil
+            if i < symbols.count, !symbols[i].isEmpty {
+                img = UIImage(systemName: symbols[i])
+            } else if i < svgIcons.count, !svgIcons[i].isEmpty {
+                let key = FlutterDartProject.lookupKey(forAsset: svgIcons[i])
+                img = SVGRenderer.render(named: key, size: CGSize(width: 24, height: 24))
+            } else if i < svgStrings.count, !svgStrings[i].isEmpty {
+                img = SVGRenderer.render(svgString: svgStrings[i], size: CGSize(width: 24, height: 24))
+            }
+
+            if let icon = img {
+                if #available(iOS 13.0, *) { action.setValue(icon, forKey: "image") }
+            }
+            ac.addAction(action)
+        }
+        ac.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+
+        if let pop = ac.popoverPresentationController {
+            pop.sourceView = sender
+            pop.sourceRect = sender.bounds
+        }
+        parentViewController(for: container)?.present(ac, animated: true, completion: nil)
     }
 }
 

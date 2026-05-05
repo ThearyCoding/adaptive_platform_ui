@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../platform/platform_info.dart';
 import '../style/sf_symbol.dart';
 import 'ios26/ios26_button.dart';
+import '../utils/svg_renderer.dart';
 
 /// An adaptive button that renders platform-specific button styles
 ///
@@ -38,7 +39,8 @@ class AdaptiveButton extends StatelessWidget {
   }) : child = null,
        icon = null,
        iconColor = null,
-       sfSymbol = null;
+       sfSymbol = null,
+       svg = null;
 
   /// Creates an adaptive button with a custom child widget
   const AdaptiveButton.child({
@@ -58,7 +60,8 @@ class AdaptiveButton extends StatelessWidget {
        textColor = null,
        icon = null,
        iconColor = null,
-       sfSymbol = null;
+       sfSymbol = null,
+       svg = null;
 
   /// Creates an adaptive button with an icon
   const AdaptiveButton.icon({
@@ -78,7 +81,8 @@ class AdaptiveButton extends StatelessWidget {
   }) : label = null,
        textColor = null,
        child = null,
-       sfSymbol = null;
+       sfSymbol = null,
+       svg = null;
 
   /// Creates an adaptive button with a native SF Symbol icon (iOS only)
   const AdaptiveButton.sfSymbol({
@@ -98,7 +102,29 @@ class AdaptiveButton extends StatelessWidget {
        textColor = null,
        child = null,
        icon = null,
-       iconColor = null;
+       iconColor = null,
+       svg = null;
+
+  /// Creates an adaptive button with a native SVG icon (iOS 26+ only)
+  const AdaptiveButton.svg({
+    super.key,
+    required this.onPressed,
+    required this.svg,
+    this.color,
+    this.style = AdaptiveButtonStyle.glass,
+    this.size = AdaptiveButtonSize.medium,
+    this.padding,
+    this.borderRadius,
+    this.minSize,
+    this.enabled = true,
+    this.useSmoothRectangleBorder = true,
+    this.useNative = true,
+  }) : label = null,
+       textColor = null,
+       child = null,
+       icon = null,
+       iconColor = null,
+       sfSymbol = null;
 
   /// The callback that is called when the button is tapped
   final VoidCallback? onPressed;
@@ -114,6 +140,9 @@ class AdaptiveButton extends StatelessWidget {
 
   /// The SF Symbol to display (used in .sfSymbol constructor)
   final SFSymbol? sfSymbol;
+
+  /// The SVG to display (used in .svg constructor)
+  final NativeSvg? svg;
 
   /// The color of the button
   ///
@@ -166,6 +195,24 @@ class AdaptiveButton extends StatelessWidget {
           IOS26Button.sfSymbol(
             onPressed: onPressed,
             sfSymbol: sfSymbol!,
+            style: _mapToIOS26Style(style),
+            size: _mapToIOS26Size(size),
+            color: color,
+            enabled: enabled,
+            padding: padding,
+            borderRadius: borderRadius,
+            minSize: minSize,
+            useSmoothRectangleBorder: useSmoothRectangleBorder,
+          ),
+        );
+      }
+
+      // SVG mode - use native SVG rendering
+      if (svg != null) {
+        return _wrapIOSButton(
+          IOS26Button.svg(
+            onPressed: onPressed,
+            svg: svg!,
             style: _mapToIOS26Style(style),
             size: _mapToIOS26Size(size),
             color: color,
@@ -281,6 +328,8 @@ class AdaptiveButton extends StatelessWidget {
             color: sfSymbol!.color ?? filledTextColor,
             size: sfSymbol!.size,
           );
+        } else if (svg != null) {
+          buttonChild = Icon(Icons.image, color: iconColor ?? filledTextColor);
         } else if (icon != null) {
           buttonChild = Icon(icon, color: iconColor ?? filledTextColor);
         } else if (child != null) {
@@ -320,6 +369,8 @@ class AdaptiveButton extends StatelessWidget {
             color: effectiveColor,
             size: sfSymbol!.size,
           );
+        } else if (svg != null) {
+          buttonChild = Icon(Icons.image, color: iconColor ?? effectiveColor);
         } else if (icon != null) {
           buttonChild = Icon(icon, color: iconColor ?? effectiveColor);
         } else if (child != null) {
@@ -354,6 +405,8 @@ class AdaptiveButton extends StatelessWidget {
             color: textColorValue,
             size: sfSymbol!.size,
           );
+        } else if (svg != null) {
+          buttonChild = Icon(Icons.image, color: iconColor ?? textColorValue);
         } else if (icon != null) {
           buttonChild = Icon(icon, color: iconColor ?? textColorValue);
         } else if (child != null) {
@@ -391,6 +444,8 @@ class AdaptiveButton extends StatelessWidget {
             color: textColorValue,
             size: sfSymbol!.size,
           );
+        } else if (svg != null) {
+          buttonChild = Icon(Icons.image, color: iconColor ?? textColorValue);
         } else if (icon != null) {
           buttonChild = Icon(icon, color: iconColor ?? textColorValue);
         } else if (child != null) {
@@ -430,6 +485,8 @@ class AdaptiveButton extends StatelessWidget {
         color: sfSymbol!.color,
         size: sfSymbol!.size,
       );
+    } else if (svg != null) {
+      buttonChild = Icon(Icons.image, color: iconColor);
     } else if (icon != null) {
       buttonChild = Icon(icon, color: iconColor);
     } else if (child != null) {

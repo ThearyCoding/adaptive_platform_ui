@@ -79,33 +79,45 @@ class iOS26SegmentedControlView: NSObject, FlutterPlatformView {
         _view.isUserInteractionEnabled = true
 
         if let config = args as? [String: Any] {
-            // Check for SF symbols first
-            if let sfSymbols = config["sfSymbols"] as? [String], !sfSymbols.isEmpty {
-                // Use SF symbols for segments
-                for (index, symbolName) in sfSymbols.enumerated() {
-                    if let image = UIImage(systemName: symbolName) {
-                        segmentedControl.insertSegment(with: image, at: index, animated: false)
-                    } else {
-                        // Fallback if symbol not found
-                        print("⚠️ SF Symbol not found: \(symbolName)")
-                    }
-                }
+            // Check for SF symbols or SVGs
+            let sfSymbols = config["sfSymbols"] as? [String]
+            let svgIcons = config["svgIcons"] as? [String]
+            let svgStrings = config["svgStrings"] as? [String]
+            
+            let iconSizeNumber = config["iconSize"] as? NSNumber
+            let iconSize = iconSizeNumber != nil ? CGFloat(iconSizeNumber!.doubleValue) : 20.0
+            let iconColorValue = config["iconColor"] as? Int
+            let iconColor = iconColorValue != nil ? colorFromARGB(iconColorValue!) : nil
 
-                // Apply icon size if provided
-                if let iconSizeNumber = config["iconSize"] as? NSNumber {
-                    let iconSize = CGFloat(iconSizeNumber.doubleValue)
-                    let configuration = UIImage.SymbolConfiguration(pointSize: iconSize)
-                    for i in 0..<segmentedControl.numberOfSegments {
-                        if let image = segmentedControl.imageForSegment(at: i) {
-                            segmentedControl.setImage(image.withConfiguration(configuration), forSegmentAt: i)
+            if (sfSymbols != nil && !sfSymbols!.isEmpty) || (svgIcons != nil && !svgIcons!.isEmpty) {
+                let count = max(sfSymbols?.count ?? 0, max(svgIcons?.count ?? 0, svgStrings?.count ?? 0))
+                
+                for i in 0..<count {
+                    var image: UIImage? = nil
+                    
+                    if let symbols = sfSymbols, i < symbols.count, !symbols[i].isEmpty {
+                        image = UIImage(systemName: symbols[i])
+                        if let size = iconSizeNumber, image != nil {
+                            let config = UIImage.SymbolConfiguration(pointSize: CGFloat(size.doubleValue))
+                            image = image?.withConfiguration(config)
                         }
+                    } else if let icons = svgIcons, i < icons.count, !icons[i].isEmpty {
+                        let key = FlutterDartProject.lookupKey(forAsset: icons[i])
+                        image = SVGRenderer.render(named: key, size: CGSize(width: iconSize, height: iconSize), tintColor: iconColor)
+                    } else if let strings = svgStrings, i < strings.count, !strings[i].isEmpty {
+                        image = SVGRenderer.render(svgString: strings[i], size: CGSize(width: iconSize, height: iconSize), tintColor: iconColor)
+                    }
+                    
+                    if let finalImage = image {
+                        segmentedControl.insertSegment(with: finalImage, at: i, animated: false)
+                    } else {
+                        segmentedControl.insertSegment(withTitle: "", at: i, animated: false)
                     }
                 }
 
-                // Apply icon color if provided
-                if let iconColorValue = config["iconColor"] as? Int {
-                    let iconColor = colorFromARGB(iconColorValue)
-                    segmentedControl.setTitleTextAttributes([.foregroundColor: iconColor], for: .normal)
+                // Apply icon color for SF Symbols (SVGRenderer handles it for SVGs)
+                if let color = iconColor {
+                    segmentedControl.setTitleTextAttributes([.foregroundColor: color], for: .normal)
                 }
             }
             // Otherwise use labels

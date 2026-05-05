@@ -8,6 +8,7 @@ import 'adaptive_badge.dart';
 import 'adaptive_bottom_navigation_bar.dart';
 import 'adaptive_button.dart';
 import 'ios26/ios26_scaffold.dart';
+import '../utils/svg_renderer.dart';
 
 /// Navigation destination for bottom navigation
 class AdaptiveNavigationDestination {
@@ -23,7 +24,7 @@ class AdaptiveNavigationDestination {
   /// Icon to display.
   ///
   /// Supported values include:
-  /// - SF Symbol name `String` for iOS native paths
+  /// - `NativeSvg` for native SVG rendering (iOS 26+)
   /// - `IconData`
   /// - `Widget`
   /// - `ImageProvider` such as `AssetImage`, `FileImage`, or `NetworkImage`
@@ -757,6 +758,13 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
 
     if (rawIcon is ImageProvider) {
       return _NavigationImageIcon(image: rawIcon);
+    }
+    
+    if (rawIcon is NativeSvg) {
+      // For non-native fallback, we could try to use flutter_svg if it was available,
+      // but since we aren't adding it, we'll just show a placeholder or nothing.
+      // On iOS 26+ native it will be handled by the platform view.
+      return color != null ? Icon(Icons.image, color: color) : const Icon(Icons.image);
     }
 
     final IconData iconData;

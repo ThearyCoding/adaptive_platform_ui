@@ -32,6 +32,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
     private var currentSelectedFileIcons: [String] = []
     private var currentNetworkIcons: [String] = []
     private var currentSelectedNetworkIcons: [String] = []
+    private var currentSvgIcons: [String] = []
+    private var currentSelectedSvgIcons: [String] = []
+    private var currentSvgStrings: [String] = []
+    private var currentSelectedSvgStrings: [String] = []
     private var currentSearchFlags: [Bool] = []
     private var currentBadgeCounts: [Int?] = []
     private let imageCache = NSCache<NSString, UIImage>()
@@ -51,6 +55,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
         var selectedFileIcons: [String] = []
         var networkIcons: [String] = []
         var selectedNetworkIcons: [String] = []
+        var svgIcons: [String] = []
+        var selectedSvgIcons: [String] = []
+        var svgStrings: [String] = []
+        var selectedSvgStrings: [String] = []
         var searchFlags: [Bool] = []
         var badgeCounts: [Int?] = []
         var spacerFlags: [Bool] = []
@@ -73,6 +81,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
             selectedFileIcons = (dict["selectedFileIcons"] as? [String]) ?? []
             networkIcons = (dict["networkIcons"] as? [String]) ?? []
             selectedNetworkIcons = (dict["selectedNetworkIcons"] as? [String]) ?? []
+            svgIcons = (dict["svgIcons"] as? [String]) ?? []
+            selectedSvgIcons = (dict["selectedSvgIcons"] as? [String]) ?? []
+            svgStrings = (dict["svgStrings"] as? [String]) ?? []
+            selectedSvgStrings = (dict["selectedSvgStrings"] as? [String]) ?? []
             searchFlags = (dict["searchFlags"] as? [Bool]) ?? []
             spacerFlags = (dict["spacerFlags"] as? [Bool]) ?? []
             if let badgeData = dict["badgeCounts"] as? [NSNumber?] {
@@ -246,9 +258,35 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                                 // Selected: Use template rendering so tintColor applies
                                 selectedImage = UIImage(systemName: symbols[i])?.withRenderingMode(.alwaysTemplate)
                             } else {
-                                // iOS <26: Use default behavior
                                 image = UIImage(systemName: symbols[i])
                                 selectedImage = image
+                            }
+                        } else if i < svgIcons.count && !svgIcons[i].isEmpty {
+                            let assetName = svgIcons[i]
+                            let key = FlutterDartProject.lookupKey(forAsset: assetName)
+                            let unselColor = unselectedTint
+                            let selColor = tint
+                            
+                            image = SVGRenderer.render(named: key, size: CGSize(width: 26, height: 26), tintColor: unselColor)
+                            
+                            if i < selectedSvgIcons.count && !selectedSvgIcons[i].isEmpty {
+                                let selKey = FlutterDartProject.lookupKey(forAsset: selectedSvgIcons[i])
+                                selectedImage = SVGRenderer.render(named: selKey, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                            } else {
+                                selectedImage = SVGRenderer.render(named: key, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                            }
+                        } else if i < svgStrings.count && !svgStrings[i].isEmpty {
+                            let svgContent = svgStrings[i]
+                            let unselColor = unselectedTint
+                            let selColor = tint
+                            
+                            image = SVGRenderer.render(svgString: svgContent, size: CGSize(width: 26, height: 26), tintColor: unselColor)
+                            
+                            if i < selectedSvgStrings.count && !selectedSvgStrings[i].isEmpty {
+                                let selSvgContent = selectedSvgStrings[i]
+                                selectedImage = SVGRenderer.render(svgString: selSvgContent, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                            } else {
+                                selectedImage = SVGRenderer.render(svgString: svgContent, size: CGSize(width: 26, height: 26), tintColor: selColor)
                             }
                         }
 
@@ -270,7 +308,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
         }
 
         let count = max(
-            max(labels.count, symbols.count),
+            max(max(labels.count, symbols.count), max(svgIcons.count, svgStrings.count)),
             max(max(assetIcons.count, fileIcons.count), networkIcons.count)
         )
         bar.items = buildItems(0..<count)
@@ -301,6 +339,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
         self.currentSelectedFileIcons = selectedFileIcons
         self.currentNetworkIcons = networkIcons
         self.currentSelectedNetworkIcons = selectedNetworkIcons
+        self.currentSvgIcons = svgIcons
+        self.currentSelectedSvgIcons = selectedSvgIcons
+        self.currentSvgStrings = svgStrings
+        self.currentSelectedSvgStrings = selectedSvgStrings
         self.currentSearchFlags = searchFlags
         self.currentBadgeCounts = badgeCounts
         // Apply minimize behavior if available
@@ -368,6 +410,10 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
             let selectedFileIcons = (args["selectedFileIcons"] as? [String]) ?? []
             let networkIcons = (args["networkIcons"] as? [String]) ?? []
             let selectedNetworkIcons = (args["selectedNetworkIcons"] as? [String]) ?? []
+            let svgIcons = (args["svgIcons"] as? [String]) ?? []
+            let selectedSvgIcons = (args["selectedSvgIcons"] as? [String]) ?? []
+            let svgStrings = (args["svgStrings"] as? [String]) ?? []
+            let selectedSvgStrings = (args["selectedSvgStrings"] as? [String]) ?? []
             let searchFlags = (args["searchFlags"] as? [Bool]) ?? []
             let selectedIndex = (args["selectedIndex"] as? NSNumber)?.intValue ?? 0
             var badgeCounts: [Int?] = []
@@ -383,11 +429,15 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
             self.currentSelectedFileIcons = selectedFileIcons
             self.currentNetworkIcons = networkIcons
             self.currentSelectedNetworkIcons = selectedNetworkIcons
+            self.currentSvgIcons = svgIcons
+            self.currentSelectedSvgIcons = selectedSvgIcons
+            self.currentSvgStrings = svgStrings
+            self.currentSelectedSvgStrings = selectedSvgStrings
             self.currentSearchFlags = searchFlags
             self.currentBadgeCounts = badgeCounts
 
             let count = max(
-                max(labels.count, symbols.count),
+                max(max(labels.count, symbols.count), max(svgIcons.count, svgStrings.count)),
                 max(max(assetIcons.count, fileIcons.count), networkIcons.count)
             )
 
@@ -467,9 +517,35 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                                     // Selected: Use template rendering so tintColor applies
                                     selectedImage = UIImage(systemName: symbols[i])?.withRenderingMode(.alwaysTemplate)
                                 } else {
-                                    // iOS <26: Use default behavior
                                     image = UIImage(systemName: symbols[i])
                                     selectedImage = image
+                                }
+                            } else if i < svgIcons.count && !svgIcons[i].isEmpty {
+                                let assetName = svgIcons[i]
+                                let key = FlutterDartProject.lookupKey(forAsset: assetName)
+                                let unselColor = self.tabBar?.unselectedItemTintColor
+                                let selColor = self.tabBar?.tintColor
+                                
+                                image = SVGRenderer.render(named: key, size: CGSize(width: 26, height: 26), tintColor: unselColor)
+                                
+                                if i < selectedSvgIcons.count && !selectedSvgIcons[i].isEmpty {
+                                    let selKey = FlutterDartProject.lookupKey(forAsset: selectedSvgIcons[i])
+                                    selectedImage = SVGRenderer.render(named: selKey, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                                } else {
+                                    selectedImage = SVGRenderer.render(named: key, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                                }
+                            } else if i < svgStrings.count && !svgStrings[i].isEmpty {
+                                let svgContent = svgStrings[i]
+                                let unselColor = self.tabBar?.unselectedItemTintColor
+                                let selColor = self.tabBar?.tintColor
+                                
+                                image = SVGRenderer.render(svgString: svgContent, size: CGSize(width: 26, height: 26), tintColor: unselColor)
+                                
+                                if i < selectedSvgStrings.count && !selectedSvgStrings[i].isEmpty {
+                                    let selSvgContent = selectedSvgStrings[i]
+                                    selectedImage = SVGRenderer.render(svgString: selSvgContent, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                                } else {
+                                    selectedImage = SVGRenderer.render(svgString: svgContent, size: CGSize(width: 26, height: 26), tintColor: selColor)
                                 }
                             }
 
@@ -629,7 +705,7 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
         // Rebuild items with new colors
         var items: [UITabBarItem] = []
         let itemCount = max(
-            max(currentLabels.count, currentSymbols.count),
+            max(max(currentLabels.count, currentSymbols.count), max(currentSvgIcons.count, currentSvgStrings.count)),
             max(max(currentAssetIcons.count, currentFileIcons.count), currentNetworkIcons.count)
         )
         for i in 0..<itemCount {
@@ -707,6 +783,33 @@ class iOS26TabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
                         } else {
                             image = UIImage(systemName: currentSymbols[i])
                             selectedImage = image
+                        }
+                    } else if i < currentSvgIcons.count && !currentSvgIcons[i].isEmpty {
+                        let assetName = currentSvgIcons[i]
+                        let key = FlutterDartProject.lookupKey(forAsset: assetName)
+                        let unselColor = bar.unselectedItemTintColor
+                        let selColor = bar.tintColor
+                        
+                        image = SVGRenderer.render(named: key, size: CGSize(width: 26, height: 26), tintColor: unselColor)
+                        
+                        if i < currentSelectedSvgIcons.count && !currentSelectedSvgIcons[i].isEmpty {
+                            let selKey = FlutterDartProject.lookupKey(forAsset: currentSelectedSvgIcons[i])
+                            selectedImage = SVGRenderer.render(named: selKey, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                        } else {
+                            selectedImage = SVGRenderer.render(named: key, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                        }
+                    } else if i < currentSvgStrings.count && !currentSvgStrings[i].isEmpty {
+                        let svgContent = currentSvgStrings[i]
+                        let unselColor = bar.unselectedItemTintColor
+                        let selColor = bar.tintColor
+                        
+                        image = SVGRenderer.render(svgString: svgContent, size: CGSize(width: 26, height: 26), tintColor: unselColor)
+                        
+                        if i < currentSelectedSvgStrings.count && !currentSelectedSvgStrings[i].isEmpty {
+                            let selSvgContent = currentSelectedSvgStrings[i]
+                            selectedImage = SVGRenderer.render(svgString: selSvgContent, size: CGSize(width: 26, height: 26), tintColor: selColor)
+                        } else {
+                            selectedImage = SVGRenderer.render(svgString: svgContent, size: CGSize(width: 26, height: 26), tintColor: selColor)
                         }
                     }
 

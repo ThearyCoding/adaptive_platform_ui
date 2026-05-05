@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../../style/sf_symbol.dart';
+import '../../utils/svg_renderer.dart';
 
 /// iOS 26 native button styles (Liquid Glass design)
 enum IOS26ButtonStyle {
@@ -71,7 +72,8 @@ class IOS26Button extends StatefulWidget {
     this.useSmoothRectangleBorder = true,
   }) : child = null,
        isChildMode = false,
-       sfSymbol = null;
+       sfSymbol = null,
+       svg = null;
 
   /// Creates an iOS 26 style button with a custom child widget
   /// The child will be overlaid on top of the native button background
@@ -90,7 +92,8 @@ class IOS26Button extends StatefulWidget {
   }) : label = '',
        textColor = null,
        isChildMode = true,
-       sfSymbol = null;
+       sfSymbol = null,
+       svg = null;
 
   /// Creates an iOS 26 style button with a native SF Symbol icon
   const IOS26Button.sfSymbol({
@@ -108,7 +111,27 @@ class IOS26Button extends StatefulWidget {
   }) : label = '',
        textColor = null,
        child = null,
-       isChildMode = false;
+       isChildMode = false,
+       svg = null;
+
+  /// Creates an iOS 26 style button with a native SVG icon
+  const IOS26Button.svg({
+    super.key,
+    required this.onPressed,
+    required this.svg,
+    this.style = IOS26ButtonStyle.glass,
+    this.size = IOS26ButtonSize.medium,
+    this.color,
+    this.enabled = true,
+    this.padding,
+    this.borderRadius,
+    this.minSize,
+    this.useSmoothRectangleBorder = true,
+  }) : label = '',
+       textColor = null,
+       child = null,
+       isChildMode = false,
+       sfSymbol = null;
 
   /// The callback that is called when the button is tapped
   final VoidCallback? onPressed;
@@ -121,6 +144,9 @@ class IOS26Button extends StatefulWidget {
 
   /// The SF Symbol to display (used in .sfSymbol() constructor)
   final SFSymbol? sfSymbol;
+
+  /// The SVG to display (used in .svg() constructor)
+  final NativeSvg? svg;
 
   /// Whether this is child mode
   final bool isChildMode;
@@ -233,12 +259,6 @@ class _IOS26ButtonState extends State<IOS26Button> {
       });
     }
 
-    if (oldWidget.useSmoothRectangleBorder != widget.useSmoothRectangleBorder) {
-      _channel.invokeMethod('setUseSmoothRectangleBorder', {
-        'useSmoothRectangleBorder': widget.useSmoothRectangleBorder,
-      });
-    }
-
     // Update SF Symbol if changed
     if (oldWidget.sfSymbol?.name != widget.sfSymbol?.name ||
         oldWidget.sfSymbol?.size != widget.sfSymbol?.size ||
@@ -249,6 +269,22 @@ class _IOS26ButtonState extends State<IOS26Button> {
           'iconSize': widget.sfSymbol!.size,
           if (widget.sfSymbol!.color != null)
             'iconColor': _colorToARGB(widget.sfSymbol!.color!),
+        });
+      }
+    }
+
+    // Update SVG if changed
+    if (oldWidget.svg?.assetName != widget.svg?.assetName ||
+        oldWidget.svg?.string != widget.svg?.string ||
+        oldWidget.svg?.size != widget.svg?.size ||
+        oldWidget.svg?.color != widget.svg?.color) {
+      if (widget.svg != null) {
+        _channel.invokeMethod('setIcon', {
+          'svgAssetName': widget.svg!.assetName,
+          'svgString': widget.svg!.string,
+          'iconSize': widget.svg!.size,
+          if (widget.svg!.color != null)
+            'iconColor': _colorToARGB(widget.svg!.color!),
         });
       }
     }
@@ -271,6 +307,11 @@ class _IOS26ButtonState extends State<IOS26Button> {
       if (widget.sfSymbol != null) 'iconSize': widget.sfSymbol!.size,
       if (widget.sfSymbol?.color != null)
         'iconColor': _colorToARGB(widget.sfSymbol!.color!),
+      if (widget.svg != null) 'svgAssetName': widget.svg!.assetName,
+      if (widget.svg != null) 'svgString': widget.svg!.string,
+      if (widget.svg != null) 'iconSize': widget.svg!.size,
+      if (widget.svg?.color != null)
+        'iconColor': _colorToARGB(widget.svg!.color!),
     };
   }
 

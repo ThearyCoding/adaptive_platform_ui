@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../utils/svg_renderer.dart';
 
 /// Native iOS 26 segmented control implementation using platform views
 class IOS26SegmentedControl extends StatefulWidget {
@@ -198,9 +199,31 @@ class _IOS26SegmentedControlState extends State<IOS26SegmentedControl> {
       ..._buildThemeParams(),
     };
 
-    // Add SF symbols if provided
+    // Add SF symbols or SVGs if provided
     if (widget.icons != null && widget.icons!.isNotEmpty) {
-      params['sfSymbols'] = widget.icons!;
+      final sfSymbols = <String>[];
+      final svgIcons = <String>[];
+      final svgStrings = <String>[];
+
+      for (final icon in widget.icons!) {
+        if (icon is String) {
+          sfSymbols.add(icon);
+          svgIcons.add('');
+          svgStrings.add('');
+        } else if (icon is NativeSvg) {
+          sfSymbols.add('');
+          svgIcons.add(icon.assetName ?? '');
+          svgStrings.add(icon.string ?? '');
+        } else {
+          sfSymbols.add('');
+          svgIcons.add('');
+          svgStrings.add('');
+        }
+      }
+
+      params['sfSymbols'] = sfSymbols;
+      params['svgIcons'] = svgIcons;
+      params['svgStrings'] = svgStrings;
     }
 
     // Add color if provided

@@ -1,11 +1,22 @@
 PODS:
   - adaptive_platform_ui (0.1.0):
     - Flutter
+    - SVGKit
+  - CocoaLumberjack (3.9.0):
+    - CocoaLumberjack/Core (= 3.9.0)
+  - CocoaLumberjack/Core (3.9.0)
   - Flutter (1.0.0)
+  - SVGKit (3.0.0):
+    - CocoaLumberjack (~> 3.0)
 
 DEPENDENCIES:
   - adaptive_platform_ui (from `.symlinks/plugins/adaptive_platform_ui/ios`)
   - Flutter (from `Flutter`)
+
+SPEC REPOS:
+  trunk:
+    - CocoaLumberjack
+    - SVGKit
 
 EXTERNAL SOURCES:
   adaptive_platform_ui:
@@ -14,8 +25,10 @@ EXTERNAL SOURCES:
     :path: Flutter
 
 SPEC CHECKSUMS:
-  adaptive_platform_ui: dcd588cb59eb4c5bd1a430158b00b98b0493b3f0
+  adaptive_platform_ui: 3a530fe0eaa59e3aca984fd5873b7c6f47954035
+  CocoaLumberjack: 5644158777912b7de7469fa881f8a3f259c2512a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 
